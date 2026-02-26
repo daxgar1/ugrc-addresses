@@ -1,0 +1,30 @@
+{
+  "name": "ugrc-addresses",
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+    "@turf/turf": "^7.3.4",
+    "express": "^5.2.1",
+    "luxon": "^3.7.2",
+    "node-schedule": "^2.1.1",
+    "osm-pbf-parser": "^2.3.0",
+    "pg": "^8.18.0",
+    "rbush": "^4.0.1",
+    "through2": "^4.0.2",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "scripts": {
+    "download-planet": "node src/downloadPlanet.js",
+    "extract-planet-addresses": "node src/extractPlanetAddresses.js",
+    "download-county-boundaries": "node src/downloadCountyBoundaries.js",
+    "download-ugrc-addresses": "node src/downloadUgrcAddresses.js",
+    "split-addresses-by-county": "node src/splitAddresses.js",
+    "conflate": "node src/conflate.js",
+    "start": "node server.js",
+    "format": "npx prettier . --write"
+  },
+  "devDependencies": {
+    "prettier": "3.8.1"
+  }
+}

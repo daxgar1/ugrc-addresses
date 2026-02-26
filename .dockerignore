@@ -1,0 +1,10 @@
+.github
+node_modules
+
+data
+out
+logs
+.env
+.gitignore
+Dockerfile
+.prettierrc

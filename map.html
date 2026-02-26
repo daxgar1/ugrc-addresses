@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/maplibre-gl@5.18.0/dist/maplibre-gl.css"
+    />
+    <script src="https://unpkg.com/maplibre-gl@5.18.0/dist/maplibre-gl.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body,
+      #map {
+        height: 100%;
+      }
+
+      #loadingDialogContainer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100dvw;
+        height: 100dvh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+      }
+      #loadingDialog {
+        background-color: white;
+        width: 500px;
+        aspect-ratio: 2;
+        max-width: 100dvw;
+        max-height: 100dvh;
+        border-radius: 25px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <style>
+      .maplibregl-popup {
+        max-width: 400px;
+        font:
+          12px/20px "Helvetica Neue",
+          Arial,
+          Helvetica,
+          sans-serif;
+      }
+
+      .map-overlay {
+        font:
+          12px/20px "Helvetica Neue",
+          Arial,
+          Helvetica,
+          sans-serif;
+        position: absolute;
+        width: 31.8%;
+        max-width: 450px;
+        top: 0;
+        left: 0;
+        padding: 10px;
+      }
+      .map-overlay .map-overlay-inner {
+        background-color: #fff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .map-overlay input {
+        margin: 2px;
+      }
+
+      .compareKeep {
+        background: transparent;
+      }
+      .compareRemove {
+        background: #eb8080;
+      }
+      .compareAdd {
+        background: #82eb82;
+      }
+    </style>
+
+    <div id="loadingDialogContainer">
+      <div id="loadingDialog">
+        <p>Loading...</p>
+        <samp id="loadingText"></samp>
+      </div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="map-overlay top">
+      <div class="map-overlay-inner">
+        <a href="https://github.com/daxgar1/ugrc-addresses">
+          <!-- Discord Logo -->
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 128 128"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M56.7937 84.9688C44.4187 83.4688 35.7 74.5625 35.7 63.0313C35.7 58.3438 37.3875 53.2813 40.2 49.9063C38.9812 46.8125 39.1687 40.25 40.575 37.5313C44.325 37.0625 49.3875 39.0313 52.3875 41.75C55.95 40.625 59.7 40.0625 64.2937 40.0625C68.8875 40.0625 72.6375 40.625 76.0125 41.6563C78.9187 39.0313 84.075 37.0625 87.825 37.5313C89.1375 40.0625 89.325 46.625 88.1062 49.8125C91.1062 53.375 92.7 58.1563 92.7 63.0313C92.7 74.5625 83.9812 83.2813 71.4187 84.875C74.6062 86.9375 76.7625 91.4375 76.7625 96.5938L76.7625 106.344C76.7625 109.156 79.1062 110.75 81.9187 109.625C98.8875 103.156 112.2 86.1875 112.2 65.1875C112.2 38.6563 90.6375 17 64.1062 17C37.575 17 16.2 38.6562 16.2 65.1875C16.2 86 29.4187 103.25 47.2312 109.719C49.7625 110.656 52.2 108.969 52.2 106.438L52.2 98.9375C50.8875 99.5 49.2 99.875 47.7 99.875C41.5125 99.875 37.8562 96.5 35.2312 90.2188C34.2 87.6875 33.075 86.1875 30.9187 85.9063C29.7937 85.8125 29.4187 85.3438 29.4187 84.7813C29.4187 83.6563 31.2937 82.8125 33.1687 82.8125C35.8875 82.8125 38.2312 84.5 40.6687 87.9688C42.5437 90.6875 44.5125 91.9063 46.8562 91.9063C49.2 91.9063 50.7 91.0625 52.8562 88.9063C54.45 87.3125 55.6687 85.9063 56.7937 84.9688Z"
+              fill="black"
+            />
+          </svg>
+        </a>
+
+        <div>
+          <h1 style="margin-top: 0">UGRC Address Viewer</h1>
+
+          <p>
+            Easily view
+            <a href="https://gis.utah.gov/">Utah Geospatial Resource Center</a>
+            addresses that are missing or incomplete in the
+            <a href="https://www.openstreetmap.org/">OpenStreetMap</a> database.
+          </p>
+
+          <p>
+            You can view the source code, report issues, and contribute to this
+            project on
+            <a href="https://github.com/daxgar1/ugrc-addresses">GitHub</a>.
+          </p>
+
+          <p>
+            The data is updated every Monday at approximately 7:00 AM Mountain
+            Time.<br />Last updated on: <span id="dataUpdatedAt">unknown</span>
+          </p>
+        </div>
+
+        <h2 style="margin-bottom: 0">Filters</h2>
+        <nav id="nav-filter">
+          <fieldset>
+            <legend>County</legend>
+            <div>
+              <select id="county" value="ALL">
+                <option value="ALL" id="counties-all">All Counties</option>
+              </select>
+              <label for="county">Pick a county to view addresses in</label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Address Type</legend>
+            <div>
+              <select id="address-type" value="ALL">
+                <option value="ALL">All Addresses</option>
+                <option value="MISSING">Missing Addresses</option>
+                <option value="PARTIAL">Partial Addresses</option>
+              </select>
+              <label for="address-type">Pick an address type to view</label>
+            </div>
+          </fieldset>
+        </nav>
+      </div>
+    </div>
+
+    <script>
+      let countyList = null;
+      let mapLayerList = [];
+      const countyGeojson = {};
+
+      const countyDataPath = "/data";
+
+      let selectedCounty = "ALL";
+      let selectedAddressType = "ALL";
+
+      function hashToProps() {
+        const hash = location.hash.substring(1); // Remove the "#" symbol
+        const props = {};
+
+        hash.split("&").forEach((prop) => {
+          const [key, value] = prop.split("=");
+
+          props[decodeURIComponent(key)] = decodeURIComponent(value);
+        });
+
+        return props;
+      }
+
+      function propsToHash(props) {
+        let hash = "";
+
+        for (const [key, value] of Object.entries(props)) {
+          hash += `&${key}=${value}`;
+        }
+
+        location.hash = hash.substring(1); // Remove the starting "&" symbol
+      }
+
+      (() => {
+        //Extract the initial selectedCounty and selectedAddressType from the hash
+        const props = hashToProps();
+
+        if (props.county) {
+          selectedCounty = props.county.toUpperCase();
+        }
+
+        if (props.addressType) {
+          selectedAddressType = props.addressType.toUpperCase();
+          document.getElementById("address-type").value = selectedAddressType;
+        }
+      })();
+
+      function capitalize(inputString) {
+        if (!inputString) return "";
+        const lowerString = inputString.toLowerCase();
+        let capString = "";
+
+        const words = lowerString.split(" ");
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
+          const firstLetter = word.substr(0, 1).toUpperCase();
+          const capWord = firstLetter.concat(word.substr(1)); // Replace first letter with captialization
+          capString = capString.concat(" ").concat(capWord);
+        }
+        return capString.trim(); // Remove leading space
+      }
+
+      const initialState = { lng: -111.5472137, lat: 39.4997552, zoom: 6 };
+
+      const map = new maplibregl.Map({
+        container: "map",
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        center: [initialState.lng, initialState.lat],
+        zoom: initialState.zoom,
+        hash: "map",
+        fadeDuration: 0,
+        attributionControl: {
+          customAttribution: `Address Data © <a href="https://gis.utah.gov/documentation/policy/license/" target="_blank">UGRC SGID</a> under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC BY 4.0</a>`,
+        },
+      });
+      map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+      async function loadGeojson() {
+        let loadingTextEl = document.getElementById("loadingText");
+        let loadingDialogEl = document.getElementById("loadingDialogContainer");
+
+        try {
+          if (!countyList) {
+            let fetchUrl = `${countyDataPath}/counties.json`;
+            loadingTextEl.innerText = "County List";
+            const response = await fetch(fetchUrl);
+            const { created, counties } = await response.json();
+            countyList = counties;
+
+            document.getElementById("dataUpdatedAt").innerText = new Date(
+              created,
+            ).toString();
+
+            // Populate the county selector
+            const countySelector = document.getElementById("county");
+            countyList.forEach((county) => {
+              const name = capitalize(county.name);
+
+              const option = new Option(name, county.name, false);
+
+              countySelector.appendChild(option);
+            });
+
+            if (selectedCounty) {
+              document.getElementById("county").value = selectedCounty;
+            }
+          }
+
+          let features = [];
+
+          for (let i = 0; i < countyList.length; i++) {
+            const county = countyList[i];
+
+            if (
+              selectedCounty &&
+              selectedCounty !== "ALL" &&
+              county.name !== selectedCounty
+            ) {
+              continue;
+            }
+
+            if (countyGeojson[county.name]) {
+              const { missing, partial } = countyGeojson[county.name];
+
+              switch (selectedAddressType) {
+                case "MISSING":
+                  features = features.concat(missing.features);
+                  break;
+
+                case "PARTIAL":
+                  features = features.concat(partial.features);
+                  break;
+
+                default:
+                  features = features.concat(missing.features);
+                  features = features.concat(partial.features);
+                  break;
+              }
+
+              continue;
+            }
+
+            loadingDialogEl.style.display = "flex";
+
+            loadingTextEl.innerText = `${capitalize(county.name)} County - Missing Addresses`;
+            const countyMissingResponse = await fetch(
+              `${countyDataPath}/${county.missingPath}`,
+            );
+            const countyMissingData = await countyMissingResponse.json();
+
+            loadingTextEl.innerText = `${capitalize(county.name)} County - Partial Addresses`;
+            const countyPartialResponse = await fetch(
+              `${countyDataPath}/${county.partialPath}`,
+            );
+            const countyPartialData = await countyPartialResponse.json();
+
+            countyGeojson[county.name] = {
+              missing: countyMissingData,
+              partial: countyPartialData,
+            };
+
+            switch (selectedAddressType) {
+              case "MISSING":
+                features = features.concat(countyMissingData.features);
+                break;
+
+              case "PARTIAL":
+                features = features.concat(countyPartialData.features);
+                break;
+
+              default:
+                features = features.concat(countyMissingData.features);
+                features = features.concat(countyPartialData.features);
+                break;
+            }
+          }
+
+          const mapStationSource = map?.getSource("addresses");
+          if (mapStationSource) {
+            mapStationSource?.setData({ type: "FeatureCollection", features });
+          }
+
+          loadingDialogEl.style.display = "none";
+        } catch (err) {
+          console.error("Failed to fetch addresses:", err);
+          loadingTextEl.innerText = "ERROR: Failed to load address points";
+        }
+      }
+
+      map.on("load", () => {
+        map.addSource("addresses", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [],
+          },
+          cluster: true,
+          clusterRadius: 100,
+          clusterMinPoints: 3,
+          clusterMaxZoom: 12,
+        });
+
+        // prettier-ignore
+        map.addLayer({
+          id: "clusters",
+          type: "circle",
+          source: "addresses",
+          filter: ["has", "point_count"],
+          paint: {
+            "circle-color": "#ef4444",
+            "circle-radius": [
+              "step",
+              ["get", "point_count"],
+              20, 10,
+              30, 100,
+              40,
+            ],
+            "circle-stroke-width": 3,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+        map.addLayer({
+          id: "cluster-count",
+          type: "symbol",
+          source: "addresses",
+          filter: ["has", "point_count"],
+          layout: {
+            "text-field": "{point_count_abbreviated}",
+            "text-size": 14,
+          },
+          paint: {
+            "text-color": "#ffffff",
+          },
+        });
+        map.addLayer({
+          id: "addresses-layer",
+          type: "circle",
+          source: "addresses",
+          // minzoom: 13,
+          paint: {
+            "circle-radius": 8,
+            "circle-color": "#3b82f6", // Blue
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+          },
+          filter: ["!", ["has", "point_count"]],
+        });
+
+        // Handle Cluster Clicks (Zoom In)
+        map.on("click", "clusters", async (e) => {
+          const features = map.queryRenderedFeatures(e.point, {
+            layers: ["clusters"],
+          });
+          const clusterId = features[0].properties.cluster_id;
+
+          const expansionZoom = await map
+            .getSource("addresses")
+            .getClusterExpansionZoom(clusterId);
+
+          map.easeTo({
+            center: features[0].geometry.coordinates,
+            zoom: expansionZoom,
+          });
+        });
+        map.on(
+          "mouseenter",
+          "clusters",
+          () => (map.getCanvas().style.cursor = "pointer"),
+        );
+        map.on(
+          "mouseleave",
+          "clusters",
+          () => (map.getCanvas().style.cursor = ""),
+        );
+
+        // When a click event occurs on a feature in the places layer, open a popup at the
+        // location of the feature, with description HTML from its properties.
+        map.on("click", "addresses-layer", (e) => {
+          let feature = e.features[0];
+          const coordinates = feature.geometry.coordinates.slice();
+          let description = "";
+          if (feature.properties.INTERNAL_MATCH_TYPE == "PARTIAL") {
+            description += "<h2>Partial Address</h2>";
+          } else if (feature.properties.INTERNAL_MATCH_TYPE == "MISSING") {
+            description += "<h2>Missing Address</h2>";
+          }
+
+          description += "<ul>";
+          for (const [key, value] of Object.entries(feature.properties)) {
+            if (key.startsWith("INTERNAL_")) {
+              if (key === "INTERNAL_OSM_TYPE") {
+                description += `<li>OSM Type=${value}</li>`;
+              }
+
+              if (key === "INTERNAL_OSM_ID") {
+                description += `<li>OSM ID=${value}</li>`;
+              }
+
+              continue;
+            }
+            if (key.startsWith("addr:")) {
+              const addrValType = key.replace(/^addr:/, ""); // remove the "addr:" prefix
+              const osmAddrVal =
+                feature.properties[`INTERNAL_OSM_${addrValType.toUpperCase()}`];
+              if (osmAddrVal) {
+                description += `<li>${key}=${diffToHtml(value, osmAddrVal === "(NONE)" ? "" : osmAddrVal)}</li>`;
+              } else {
+                description += `<li>${key}=${value}</li>`;
+              }
+            } else {
+              description += `<li>${key}=${value}</li>`;
+            }
+          }
+          description += "</ul>";
+
+          // Ensure that if the map is zoomed out such that multiple
+          // copies of the feature are visible, the popup appears
+          // over the copy being pointed to.
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+
+          new maplibregl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(description)
+            .addTo(map);
+        });
+        map.on(
+          "mouseenter",
+          "addresses-layer",
+          () => (map.getCanvas().style.cursor = "pointer"),
+        );
+        map.on(
+          "mouseleave",
+          "addresses-layer",
+          () => (map.getCanvas().style.cursor = ""),
+        );
+
+        loadGeojson();
+      });
+
+      function applyFilter(filter) {
+        map.setFilter("addresses-layer", [
+          "all",
+          ["!", ["has", "point_count"]],
+          filter,
+        ]);
+      }
+
+      document.getElementById("nav-filter").addEventListener("change", (e) => {
+        //TODO: Allow for filtering data based on what props are missing
+        // applyFilter(filters);
+
+        const hashProps = hashToProps();
+
+        if (e.target.id === "county") {
+          const county = e.target.value;
+          if (county === "ALL") {
+            delete hashProps.county;
+          } else {
+            hashProps.county = encodeURIComponent(county.toLowerCase());
+          }
+        }
+
+        if (e.target.id === "address-type") {
+          const addressType = e.target.value;
+          if (addressType === "ALL") {
+            delete hashProps.addressType;
+          } else {
+            hashProps.addressType = encodeURIComponent(
+              addressType.toLowerCase(),
+            );
+          }
+        }
+
+        // This will trigger the `hashchange` event callback if an update is needed, which in turn will call the `loadGeojson` function
+        propsToHash(hashProps);
+        // loadGeojson(map);
+      });
+
+      function locationHashChanged() {
+        const props = hashToProps();
+        let newCounty = "ALL",
+          newAddressType = "ALL";
+        let updated = false;
+
+        newCounty = props?.county?.toUpperCase() || "ALL";
+        if (selectedCounty !== newCounty) {
+          selectedCounty = newCounty;
+          updated = true;
+        }
+
+        newAddressType = props?.addressType?.toUpperCase() || "ALL";
+        if (selectedAddressType !== newAddressType) {
+          selectedAddressType = newAddressType;
+          updated = true;
+        }
+
+        if (updated) {
+          loadGeojson(map);
+        }
+      }
+
+      window.addEventListener("hashchange", locationHashChanged);
+
+      function diffToHtml(desired, current) {
+        function escapeHtml(str) {
+          return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        }
+
+        // Tokenize into words AND whitespace so spacing is preserved
+        function tokenize(text) {
+          return text.match(/\s+|[^\s]+/g) || [];
+        }
+
+        const desiredTokens = tokenize(desired);
+        const currentTokens = tokenize(current);
+
+        const desiredTokensLength = desiredTokens.length;
+        const currentTokensLength = currentTokens.length;
+
+        // Build LCS matrix
+        const lcsMatrix = Array(desiredTokensLength + 1)
+          .fill(null)
+          .map(() => Array(currentTokensLength + 1).fill(0));
+
+        for (let i = desiredTokensLength - 1; i >= 0; i--) {
+          for (let j = currentTokensLength - 1; j >= 0; j--) {
+            if (desiredTokens[i] === currentTokens[j]) {
+              lcsMatrix[i][j] = lcsMatrix[i + 1][j + 1] + 1;
+            } else {
+              lcsMatrix[i][j] = Math.max(
+                lcsMatrix[i + 1][j],
+                lcsMatrix[i][j + 1],
+              );
+            }
+          }
+        }
+
+        // Reconstruct operations
+        let i = 0,
+          j = 0;
+        const ops = [];
+
+        while (i < desiredTokensLength && j < currentTokensLength) {
+          if (desiredTokens[i] === currentTokens[j]) {
+            ops.push({ type: "keep", value: currentTokens[j] });
+            i++;
+            j++;
+          } else if (lcsMatrix[i + 1][j] >= lcsMatrix[i][j + 1]) {
+            ops.push({ type: "add", value: desiredTokens[i++] });
+          } else {
+            ops.push({ type: "remove", value: currentTokens[j++] });
+          }
+        }
+
+        while (i < desiredTokensLength) {
+          ops.push({ type: "add", value: desiredTokens[i++] });
+        }
+
+        while (j < currentTokensLength) {
+          ops.push({ type: "remove", value: currentTokens[j++] });
+        }
+
+        // Normalize so remove comes before add in replacement blocks
+        const normalized = [];
+        let k = 0;
+
+        while (k < ops.length) {
+          if (ops[k].type === "add" || ops[k].type === "remove") {
+            const block = [];
+            while (k < ops.length && ops[k].type !== "keep") {
+              block.push(ops[k++]);
+            }
+
+            normalized.push(...block.filter((o) => o.type === "remove"));
+            normalized.push(...block.filter((o) => o.type === "add"));
+          } else {
+            normalized.push(ops[k++]);
+          }
+        }
+
+        // Group contiguous same-type tokens
+        let html = "";
+        let buffer = "";
+        let currentType = null;
+
+        function flush() {
+          if (!buffer) return;
+
+          const className =
+            currentType === "keep" ? "compareKeep"
+            : currentType === "add" ? "compareAdd"
+            : "compareRemove";
+
+          html += `<span class="${className}">${escapeHtml(buffer)}</span>`;
+          buffer = "";
+        }
+
+        for (const op of normalized) {
+          if (op.type !== currentType) {
+            flush();
+            currentType = op.type;
+          }
+          buffer += op.value;
+        }
+
+        flush();
+
+        return html;
+      }
+    </script>
+  </body>
+</html>
