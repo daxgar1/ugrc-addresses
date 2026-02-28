@@ -231,6 +231,23 @@
                 <label for="address-type">Pick an address type to view</label>
               </div>
             </fieldset>
+
+            <fieldset>
+              <legend>Partial Address Mismatch Property</legend>
+              <div>
+                <select id="mismatch-type" value="ALL">
+                  <option value="ALL">All Fields</option>
+                  <option value="STREET">Street Names</option>
+                  <option value="CITY">City Names</option>
+                  <option value="POSTCODE">ZIP/Post Codes</option>
+                </select>
+                <br />
+                <label for="mismatch-type"
+                  >Show only partial addresses where this property is
+                  wrong</label
+                >
+              </div>
+            </fieldset>
           </nav>
         </div>
       </div>
@@ -257,6 +274,17 @@
 
       let selectedCounty = "ALL";
       let selectedAddressType = "ALL";
+      let selectedMismatchType = "ALL";
+
+      function applyPartialMismatchFilter(features) {
+        if (selectedMismatchType === "ALL") {
+          return features;
+        } else {
+          return features.filter((feature) => {
+            return feature.properties[`INTERNAL_OSM_${selectedMismatchType}`];
+          });
+        }
+      }
 
       function hashToProps() {
         const hash = location.hash.substring(1); // Remove the "#" symbol
@@ -292,6 +320,11 @@
         if (props.addressType) {
           selectedAddressType = props.addressType.toUpperCase();
           document.getElementById("address-type").value = selectedAddressType;
+        }
+
+        if (props.mismatchType) {
+          selectedMismatchType = props.mismatchType.toUpperCase();
+          document.getElementById("mismatch-type").value = selectedMismatchType;
         }
       })();
 
@@ -369,58 +402,45 @@
               continue;
             }
 
-            if (countyGeojson[county.name]) {
-              const { missing, partial } = countyGeojson[county.name];
+            if (!countyGeojson[county.name]) {
+              loadingDialogEl.style.display = "flex";
 
-              switch (selectedAddressType) {
-                case "MISSING":
-                  features = features.concat(missing.features);
-                  break;
+              loadingTextEl.innerText = `${capitalize(county.name)} County - Missing Addresses`;
+              const countyMissingResponse = await fetch(
+                `${countyDataPath}/${county.missingPath}`,
+              );
+              const countyMissingData = await countyMissingResponse.json();
 
-                case "PARTIAL":
-                  features = features.concat(partial.features);
-                  break;
+              loadingTextEl.innerText = `${capitalize(county.name)} County - Partial Addresses`;
+              const countyPartialResponse = await fetch(
+                `${countyDataPath}/${county.partialPath}`,
+              );
+              const countyPartialData = await countyPartialResponse.json();
 
-                default:
-                  features = features.concat(missing.features);
-                  features = features.concat(partial.features);
-                  break;
-              }
-
-              continue;
+              countyGeojson[county.name] = {
+                missing: countyMissingData,
+                partial: countyPartialData,
+              };
             }
 
-            loadingDialogEl.style.display = "flex";
-
-            loadingTextEl.innerText = `${capitalize(county.name)} County - Missing Addresses`;
-            const countyMissingResponse = await fetch(
-              `${countyDataPath}/${county.missingPath}`,
-            );
-            const countyMissingData = await countyMissingResponse.json();
-
-            loadingTextEl.innerText = `${capitalize(county.name)} County - Partial Addresses`;
-            const countyPartialResponse = await fetch(
-              `${countyDataPath}/${county.partialPath}`,
-            );
-            const countyPartialData = await countyPartialResponse.json();
-
-            countyGeojson[county.name] = {
-              missing: countyMissingData,
-              partial: countyPartialData,
-            };
+            const { missing, partial } = countyGeojson[county.name];
 
             switch (selectedAddressType) {
               case "MISSING":
-                features = features.concat(countyMissingData.features);
+                features = features.concat(missing.features);
                 break;
 
               case "PARTIAL":
-                features = features.concat(countyPartialData.features);
+                features = features.concat(
+                  applyPartialMismatchFilter(partial.features),
+                );
                 break;
 
               default:
-                features = features.concat(countyMissingData.features);
-                features = features.concat(countyPartialData.features);
+                features = features.concat(missing.features);
+                features = features.concat(
+                  applyPartialMismatchFilter(partial.features),
+                );
                 break;
             }
           }
@@ -582,7 +602,7 @@
             }
 
             if (key.startsWith("addr:")) {
-              const addrValType = key.replace(/^addr:/, ""); // remove the "addr:" prefix
+              const addrValType = key.substring(5); // remove the "addr:" prefix
               const osmAddrVal =
                 feature.properties[`INTERNAL_OSM_${addrValType.toUpperCase()}`];
 
@@ -623,18 +643,7 @@
         loadGeojson();
       });
 
-      function applyFilter(filter) {
-        map.setFilter("addresses-layer", [
-          "all",
-          ["!", ["has", "point_count"]],
-          filter,
-        ]);
-      }
-
       document.getElementById("nav-filter").addEventListener("change", (e) => {
-        //TODO: Allow for filtering data based on what props are missing
-        // applyFilter(filters);
-
         const hashProps = hashToProps();
 
         if (e.target.id === "county") {
@@ -653,6 +662,17 @@
           } else {
             hashProps.addressType = encodeURIComponent(
               addressType.toLowerCase(),
+            );
+          }
+        }
+
+        if (e.target.id === "mismatch-type") {
+          const mismatchType = e.target.value;
+          if (mismatchType === "ALL") {
+            delete hashProps.mismatchType;
+          } else {
+            hashProps.mismatchType = encodeURIComponent(
+              mismatchType.toLowerCase(),
             );
           }
         }
@@ -677,6 +697,12 @@
         newAddressType = props?.addressType?.toUpperCase() || "ALL";
         if (selectedAddressType !== newAddressType) {
           selectedAddressType = newAddressType;
+          updated = true;
+        }
+
+        newMismatchType = props?.mismatchType?.toUpperCase() || "ALL";
+        if (selectedMismatchType !== newMismatchType) {
+          selectedMismatchType = newMismatchType;
           updated = true;
         }
 
