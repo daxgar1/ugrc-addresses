@@ -203,7 +203,17 @@ function compare(ugrcVal, osmVal, type = "") {
     return "FULL";
   }
 
-  if (type === "STREET") {
+  if (type === "HOUSENUMBER") {
+    // Support multiple house numbers in a single OSM address
+    // House numbers can be separated with either a `,` or a `;`
+    const houseNumbers = osmNormal.split(/;|,/);
+
+    for (const houseNumber of houseNumbers) {
+      if (ugrcSpaceless === houseNumber.replace(spaceRegex, "")) {
+        return "FULL";
+      }
+    }
+  } else if (type === "STREET") {
     // Remove a prefix direction if it exists at the start of the OSM street name
     osmNormal = osmNormal.replace(streetPrefixRegex, "");
 
@@ -243,6 +253,43 @@ function compare(ugrcVal, osmVal, type = "") {
   } else if (type === "UNIT") {
     if (!ugrcVal && !osmVal) {
       return "FULL";
+    } else if (!ugrcVal && osmVal) {
+      // Allow for an OSM address with a unit number to match a UGRC address without one
+      return "FULL";
+    }
+
+    // Support multiple units and unit ranges in OSM addresses
+    const unitNumbers = osmNormal
+      // Split into sections
+      .split(/;|,/)
+      // Expand ranges
+      .map((unitNumber) => {
+        const range = unitNumber.split("-");
+        if (range.length !== 2 || !Number(range[0]) || !Number(range[1])) {
+          return unitNumber;
+        }
+
+        // Convert to numbers and find out which is the lower part of the range
+        const rawFirst = Math.floor(Number(range[0])),
+          rawSecond = Math.floor(Number(range[1]));
+        const start = Math.min(rawFirst, rawSecond);
+        const end = Math.max(rawFirst, rawSecond);
+
+        // Expand the range
+        let inRange = [];
+        for (let i = start; i <= end; i++) {
+          inRange.push(i.toString());
+        }
+
+        return inRange;
+      })
+      // Collapse ranges into the base array
+      .flat();
+
+    for (const unitNumber of unitNumbers) {
+      if (ugrcSpaceless === unitNumber.replace(spaceRegex, "")) {
+        return "FULL";
+      }
     }
   } else if (type === "POSTCODE") {
     // OSM data could contain the full ZIP+4 Code, where the UGRC data only contains the 5-digit ZIP Code
