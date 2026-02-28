@@ -194,15 +194,18 @@ async function scheduledSyncJob(fireTime, forceUgrcSync = false) {
     );
 
     failureStep = "Conflation";
-    await conflate();
+    const conflationResults = await conflate();
 
     const duration = ((Date.now() - start) / 1000).toFixed(2);
 
     await sendDiscordNotification(
       true,
       `Data sync successfully completed in ${duration}s${
-        isFirstMonday ? ", including UGRC data" : ""
-      }`,
+        isFirstMonday || forceUgrcSync ? ", including UGRC data" : ""
+      }\n` +
+        `${conflationResults.full.toLocaleString("en-US")} full addresses\n` +
+        `${conflationResults.partial.toLocaleString("en-US")} partial addresses\n` +
+        `${conflationResults.missing.toLocaleString("en-US")} missing addresses`,
     );
   } catch (error) {
     logger.error(

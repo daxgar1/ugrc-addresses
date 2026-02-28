@@ -647,6 +647,8 @@ export async function conflate() {
   await setTimeout(5000);
 
   logger.info("conflate.js - Counties file saved");
+
+  return fullStats;
 }
 
 if (isScriptInvokedDirectly(import.meta)) {
