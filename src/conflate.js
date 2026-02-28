@@ -582,12 +582,12 @@ export async function conflate() {
     missing: 0,
   };
 
-  console.time(`Conflated all in`);
+  const conflationStartTime = Date.now();
 
   for (let i = 0; i < counties.length; i++) {
     const county = counties[i];
 
-    console.time(`Conflated ${county.name} in`);
+    const countyConflationStartTime = Date.now();
 
     const filePath = join(OutputFolder, county.name.replace(spaceRegex, "-"));
 
@@ -605,26 +605,34 @@ export async function conflate() {
 
     outCounties.push(countyListEntry);
 
-    console.timeEnd(`Conflated ${county.name} in`);
+    const countyTotalConflationTime = Date.now() - countyConflationStartTime;
+    logger.info(
+      `conflate.js - ${county.name} - Conflated in ${countyTotalConflationTime / 1000}s`,
+    );
 
     logger.info(
-      `conflate.js - ${stats.full.count} Full Addresses${createFullAddressFile ? `` : ` - not written to disk`}`,
+      `conflate.js - ${county.name} - ${stats.full.count} Full Addresses${createFullAddressFile ? `` : ` - not written to disk`}`,
     );
-    logger.info(`conflate.js - ${stats.partial.count} Partial Addresses`);
-    logger.info(`conflate.js - ${stats.missing.count} Missing Addresses\r\n`);
+    logger.info(
+      `conflate.js - ${county.name} - ${stats.partial.count} Partial Addresses`,
+    );
+    logger.info(
+      `conflate.js - ${county.name} - ${stats.missing.count} Missing Addresses`,
+    );
 
     fullStats.full += stats.full.count;
     fullStats.partial += stats.partial.count;
     fullStats.missing += stats.missing.count;
   }
 
-  console.timeEnd(`Conflated all in`);
+  const totalConflationTime = Date.now() - conflationStartTime;
+  logger.info(`conflate.js - Conflated all in ${totalConflationTime / 1000}s`);
 
   logger.info(
     `conflate.js - ${fullStats.full} Full Addresses${createFullAddressFile ? `` : ` - not written to disk`}`,
   );
   logger.info(`conflate.js - ${fullStats.partial} Partial Addresses`);
-  logger.info(`conflate.js - ${fullStats.missing} Missing Addresses\r\n`);
+  logger.info(`conflate.js - ${fullStats.missing} Missing Addresses`);
 
   logger.info("conflate.js - Saving counties file...");
 
@@ -638,9 +646,7 @@ export async function conflate() {
   // ensure that the files are written to the disk properly
   await setTimeout(5000);
 
-  logger.info("conflate.js - Counties file saved\r\n");
-
-  // logger.info(`conflate.js - ${countyFilePath}\r\n${await fs.stat(countyFilePath)}`);
+  logger.info("conflate.js - Counties file saved");
 }
 
 if (isScriptInvokedDirectly(import.meta)) {

@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import {
+  logger,
   UgrcPostgresConfig,
   UtahCountyFile,
   UgrcCountyAddressFolder,
@@ -73,11 +74,14 @@ export async function downloadUgrcAddresses() {
       `${county.name.replace(/\s+/g, "-")}.geojson`,
     );
 
-    console.time(`Downloaded addresses for ${county.name} in`);
+    const downloadStartTime = Date.now();
 
     const geoData = await loadUgrcDataAsGeojson(county.fips);
 
-    console.timeEnd(`Downloaded addresses for ${county.name} in`);
+    const downloadTotalTime = Date.now() - downloadStartTime;
+    logger.info(
+      `downloadUgrcAddresses.js - ${county.name} - Downloaded in ${downloadTotalTime / 1000}s`,
+    );
 
     await fs.writeFile(filePath, JSON.stringify(geoData), "utf8");
   }
