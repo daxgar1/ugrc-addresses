@@ -103,7 +103,7 @@
 
     <div class="map-overlay top">
       <div class="map-overlay-inner">
-        <a href="https://github.com/daxgar1/ugrc-addresses">
+        <a target="_blank" href="https://github.com/daxgar1/ugrc-addresses">
           <!-- Discord Logo -->
           <svg
             width="32"
@@ -124,15 +124,22 @@
 
           <p>
             Easily view
-            <a href="https://gis.utah.gov/">Utah Geospatial Resource Center</a>
+            <a target="_blank" href="https://gis.utah.gov/"
+              >Utah Geospatial Resource Center</a
+            >
             addresses that are missing or incomplete in the
-            <a href="https://www.openstreetmap.org/">OpenStreetMap</a> database.
+            <a target="_blank" href="https://www.openstreetmap.org/"
+              >OpenStreetMap</a
+            >
+            database.
           </p>
 
           <p>
             You can view the source code, report issues, and contribute to this
             project on
-            <a href="https://github.com/daxgar1/ugrc-addresses">GitHub</a>.
+            <a target="_blank" href="https://github.com/daxgar1/ugrc-addresses"
+              >GitHub</a
+            >.
           </p>
 
           <p>
@@ -240,7 +247,7 @@
         hash: "map",
         fadeDuration: 0,
         attributionControl: {
-          customAttribution: `Address Data © <a href="https://gis.utah.gov/documentation/policy/license/" target="_blank">UGRC SGID</a> under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC BY 4.0</a>`,
+          customAttribution: `Address Data © <a target="_blank" href="https://gis.utah.gov/documentation/policy/license/" target="_blank">UGRC SGID</a> under <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC BY 4.0</a>`,
         },
       });
       map.addControl(new maplibregl.NavigationControl(), "top-right");
@@ -449,10 +456,42 @@
           let feature = e.features[0];
           const coordinates = feature.geometry.coordinates.slice();
           let description = "";
+          let addedOsmEditLink = false;
+
           if (feature.properties.INTERNAL_MATCH_TYPE == "PARTIAL") {
             description += "<h2>Partial Address</h2>";
+
+            if (
+              feature.properties.INTERNAL_OSM_TYPE &&
+              feature.properties.INTERNAL_OSM_ID
+            ) {
+              description += `
+                <p>
+                  <a
+                    target="_blank"
+                    href="https://www.openstreetmap.org/edit?${feature.properties.INTERNAL_OSM_TYPE}=${feature.properties.INTERNAL_OSM_ID}#map=20/${coordinates[1]}/${coordinates[0]}"
+                    >
+                    Edit with iD
+                  </a>
+                </p>
+              `;
+              addedOsmEditLink = true;
+            }
           } else if (feature.properties.INTERNAL_MATCH_TYPE == "MISSING") {
             description += "<h2>Missing Address</h2>";
+          }
+
+          if (!addedOsmEditLink) {
+            description += `
+              <p>
+                <a
+                  target="_blank"
+                  href="https://www.openstreetmap.org/edit#map=20/${coordinates[1]}/${coordinates[0]}"
+                  >
+                  Open location in iD
+                </a>
+              </p>
+            `;
           }
 
           description += "<ul>";
@@ -468,10 +507,12 @@
 
               continue;
             }
+
             if (key.startsWith("addr:")) {
               const addrValType = key.replace(/^addr:/, ""); // remove the "addr:" prefix
               const osmAddrVal =
                 feature.properties[`INTERNAL_OSM_${addrValType.toUpperCase()}`];
+
               if (osmAddrVal) {
                 description += `<li>${key}=${diffToHtml(value, osmAddrVal === "(NONE)" ? "" : osmAddrVal)}</li>`;
               } else {
