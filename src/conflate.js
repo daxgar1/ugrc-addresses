@@ -496,11 +496,13 @@ async function conflateCounty(county, outputFile) {
       geometry: {
         ...ugrcFeature.geometry,
         coordinates: ugrcFeature.geometry.coordinates.map(
-          (coord) => coord.toFixed(6), // Decrease the coordinate precision to decrease client-side processing
+          (coord) => Number(coord.toFixed(6)), // Decrease the coordinate precision to decrease client-side processing
         ),
       },
       properties: {
         ...ugrcProps,
+        "source:addr": "UGRC",
+        INTERNAL_COUNTY: county.name,
         INTERNAL_MATCH_TYPE: matchType,
         ...bestInternalProps,
       },
