@@ -72,6 +72,7 @@ export const UgrcCountyAddressFolder = "./data/ugrc-county-addresses";
 export const UtahCountyFile = "./data/utah-counties.json";
 
 export const OutputFolder = "./out";
+export const MapRouletteDataFolder = "./out/maproulette";
 
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";

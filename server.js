@@ -11,6 +11,7 @@ import { downloadCountyBoundaries } from "./src/downloadCountyBoundaries.js";
 import { downloadUgrcAddresses } from "./src/downloadUgrcAddresses.js";
 import { splitAddressesByCounty } from "./src/splitAddresses.js";
 import { conflate } from "./src/conflate.js";
+import { createMapRouletteChallengeFiles } from "./src/createMapRouletteChallengeFiles.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -195,6 +196,9 @@ async function scheduledSyncJob(fireTime, forceUgrcSync = false) {
 
     failureStep = "Conflation";
     const conflationResults = await conflate();
+
+    // Create files for MapRoulette Tag Add Challenges
+    await createMapRouletteChallengeFiles();
 
     const duration = ((Date.now() - start) / 1000).toFixed(2);
 
