@@ -3,7 +3,7 @@ WORKDIR /usr/local/ugrc-addresses
 
 # Install required packages
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
-    apt-get install -y --no-install-recommends osmium-tool curl && \
+    apt-get install -y --no-install-recommends osmium-tool curl tippecanoe && \
     rm -rf /var/lib/apt/lists/*
 
 # Install the application dependencies

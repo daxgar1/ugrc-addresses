@@ -79,9 +79,9 @@ The conflation process works as follows:
 # Output Data Format
 
 Conflated data is output as GeoJSON FeatureCollection files containing Point
-features.
+features, along with .pmtiles vector tile files.
 
-The final output files follow this naming convention:
+The GeoJSON output files follow this naming convention:
 `(COUNTY-NAME)-(missing|partial|full).geo.json`
 
 For example, if the full address file is written, Salt Lake County data would be
@@ -94,9 +94,24 @@ output in these files:
 County names are normalized by converting them to uppercase and replacing spaces
 with hyphens (-).
 
-## GeoJSON Properties
+These GeoJSON files are then combined into a .pmtiles vector file with
+[Tippecanoe](https://github.com/felt/tippecanoe), with all points on a layer
+called `addresses`. The main vector tile file is called `addresses.pmtiles`, and
+it contains all missing and partial address points, along with internal data for
+use in the map display.
 
-The following properties can be present on address points in the GeoJSON:
+There is also a `missing-addresses.pmtiles` file created, available at
+[`https://ugrc-addresses.daxgardev.com/data/missing-addresses.pmtiles`](https://ugrc-addresses.daxgardev.com/data/missing-addresses.pmtiles),
+that only contains missing addresses, with the internal properties removed,
+which is can be added as a view-only data source in
+[Rapid](https://rapideditor.org/edit#data=https://ugrc-addresses.daxgardev.com/data/missing-addresses.pmtiles),
+or as a custom data source in the JOSM
+[MapWithAi](https://github.com/JOSM/MapWithAI) plugin.
+
+## GeoJSON and Vector Tile Properties
+
+The following properties can be present on address points in the GeoJSON or
+Vector Tiles:
 
 - `addr:unit`: The unit number from UGRC.
 - `addr:housenumber`: The house number from UGRC.
@@ -104,6 +119,7 @@ The following properties can be present on address points in the GeoJSON:
 - `addr:city`: The city name from UGRC.
 - `addr:postcode`: The ZIP code from UGRC.
 - `addr:state`: The two-letter state code `UT`.
+- `source:addr`: The source of the address, `UGRC`.
 
 - `INTERNAL_MATCH_TYPE`: The match type of the address point. Can be `MISSING`,
   `PARTIAL`, or `FULL`.
@@ -182,6 +198,8 @@ found at https://github.com/agrc/open-sgid
 - `npm run split-addresses-by-county`: Splits the OSM addresses file into
   separate files for each county, using the county boundaries from UGRC
 - `npm run conflate`: Conflates the UGRC and OSM data on a per-county basis
+- `npm run create-vector-tiles`: Creates the vector tile files from the
+  conflated data
 
 ## Start the server:
 

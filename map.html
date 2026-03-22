@@ -8,6 +8,7 @@
       href="https://unpkg.com/maplibre-gl@5.18.0/dist/maplibre-gl.css"
     />
     <script src="https://unpkg.com/maplibre-gl@5.18.0/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
     <style>
       body {
         margin: 0;
@@ -345,6 +346,11 @@
 
       const initialState = { lng: -111.5472137, lat: 39.4997552, zoom: 6 };
 
+      const tileProtocol = new pmtiles.Protocol();
+      maplibregl.addProtocol("pmtiles", tileProtocol.tile);
+
+      const tilesURL = "pmtiles:///data/addresses.pmtiles";
+
       const map = new maplibregl.Map({
         container: "map",
         style: "https://tiles.openfreemap.org/styles/liberty",
@@ -358,7 +364,7 @@
       });
       map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-      async function loadGeojson() {
+      async function loadCounties() {
         let loadingTextEl = document.getElementById("loadingText");
         let loadingDialogEl = document.getElementById("loadingDialogContainer");
 
@@ -389,68 +395,8 @@
             }
           }
 
-          let features = [];
-
-          for (let i = 0; i < countyList.length; i++) {
-            const county = countyList[i];
-
-            if (
-              selectedCounty &&
-              selectedCounty !== "ALL" &&
-              county.name !== selectedCounty
-            ) {
-              continue;
-            }
-
-            if (!countyGeojson[county.name]) {
-              loadingDialogEl.style.display = "flex";
-
-              loadingTextEl.innerText = `${capitalize(county.name)} County - Missing Addresses`;
-              const countyMissingResponse = await fetch(
-                `${countyDataPath}/${county.missingPath}`,
-              );
-              const countyMissingData = await countyMissingResponse.json();
-
-              loadingTextEl.innerText = `${capitalize(county.name)} County - Partial Addresses`;
-              const countyPartialResponse = await fetch(
-                `${countyDataPath}/${county.partialPath}`,
-              );
-              const countyPartialData = await countyPartialResponse.json();
-
-              countyGeojson[county.name] = {
-                missing: countyMissingData,
-                partial: countyPartialData,
-              };
-            }
-
-            const { missing, partial } = countyGeojson[county.name];
-
-            switch (selectedAddressType) {
-              case "MISSING":
-                features = features.concat(missing.features);
-                break;
-
-              case "PARTIAL":
-                features = features.concat(
-                  applyPartialMismatchFilter(partial.features),
-                );
-                break;
-
-              default:
-                features = features.concat(missing.features);
-                features = features.concat(
-                  applyPartialMismatchFilter(partial.features),
-                );
-                break;
-            }
-          }
-
-          const mapStationSource = map?.getSource("addresses");
-          if (mapStationSource) {
-            mapStationSource?.setData({ type: "FeatureCollection", features });
-          }
-
           loadingDialogEl.style.display = "none";
+          return;
         } catch (err) {
           console.error("Failed to fetch addresses:", err);
           loadingTextEl.innerText = "ERROR: Failed to load address points";
@@ -459,53 +405,15 @@
 
       map.on("load", () => {
         map.addSource("addresses", {
-          type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: [],
-          },
-          cluster: true,
-          clusterRadius: 100,
-          clusterMinPoints: 3,
-          clusterMaxZoom: 12,
+          type: "vector",
+          url: tilesURL,
         });
 
-        // prettier-ignore
-        map.addLayer({
-          id: "clusters",
-          type: "circle",
-          source: "addresses",
-          filter: ["has", "point_count"],
-          paint: {
-            "circle-color": "#ef4444",
-            "circle-radius": [
-              "step",
-              ["get", "point_count"],
-              20, 10,
-              30, 100,
-              40,
-            ],
-            "circle-stroke-width": 3,
-            "circle-stroke-color": "#ffffff",
-          },
-        });
-        map.addLayer({
-          id: "cluster-count",
-          type: "symbol",
-          source: "addresses",
-          filter: ["has", "point_count"],
-          layout: {
-            "text-field": "{point_count_abbreviated}",
-            "text-size": 14,
-          },
-          paint: {
-            "text-color": "#ffffff",
-          },
-        });
         map.addLayer({
           id: "addresses-layer",
           type: "circle",
           source: "addresses",
+          "source-layer": "addresses",
           // minzoom: 13,
           paint: {
             "circle-radius": 8,
@@ -513,35 +421,7 @@
             "circle-stroke-width": 2,
             "circle-stroke-color": "#ffffff",
           },
-          filter: ["!", ["has", "point_count"]],
         });
-
-        // Handle Cluster Clicks (Zoom In)
-        map.on("click", "clusters", async (e) => {
-          const features = map.queryRenderedFeatures(e.point, {
-            layers: ["clusters"],
-          });
-          const clusterId = features[0].properties.cluster_id;
-
-          const expansionZoom = await map
-            .getSource("addresses")
-            .getClusterExpansionZoom(clusterId);
-
-          map.easeTo({
-            center: features[0].geometry.coordinates,
-            zoom: expansionZoom,
-          });
-        });
-        map.on(
-          "mouseenter",
-          "clusters",
-          () => (map.getCanvas().style.cursor = "pointer"),
-        );
-        map.on(
-          "mouseleave",
-          "clusters",
-          () => (map.getCanvas().style.cursor = ""),
-        );
 
         // When a click event occurs on a feature in the places layer, open a popup at the
         // location of the feature, with description HTML from its properties.
@@ -589,7 +469,7 @@
 
           description += "<ul>";
           for (const [key, value] of Object.entries(feature.properties)) {
-            if (key.startsWith("INTERNAL_")) {
+            if (key.startsWith("INTERNAL_") || key === "source:addr") {
               if (key === "INTERNAL_OSM_TYPE") {
                 description += `<li>OSM Type=${value}</li>`;
               }
@@ -640,7 +520,8 @@
           () => (map.getCanvas().style.cursor = ""),
         );
 
-        loadGeojson();
+        loadCounties();
+        locationHashChanged();
       });
 
       document.getElementById("nav-filter").addEventListener("change", (e) => {
@@ -677,37 +558,44 @@
           }
         }
 
-        // This will trigger the `hashchange` event callback if an update is needed, which in turn will call the `loadGeojson` function
+        // This will trigger the `hashchange` event callback if an update is needed
         propsToHash(hashProps);
-        // loadGeojson(map);
       });
 
       function locationHashChanged() {
         const props = hashToProps();
-        let newCounty = "ALL",
-          newAddressType = "ALL";
         let updated = false;
 
-        newCounty = props?.county?.toUpperCase() || "ALL";
+        const filters = ["all"];
+
+        const newCounty = props?.county?.toUpperCase() || "ALL";
         if (selectedCounty !== newCounty) {
           selectedCounty = newCounty;
-          updated = true;
+        }
+        if (selectedCounty !== "ALL") {
+          filters.push(["==", ["get", "INTERNAL_COUNTY"], newCounty]);
         }
 
-        newAddressType = props?.addressType?.toUpperCase() || "ALL";
+        const newAddressType = props?.addressType?.toUpperCase() || "ALL";
         if (selectedAddressType !== newAddressType) {
           selectedAddressType = newAddressType;
-          updated = true;
+        }
+        if (selectedAddressType !== "ALL") {
+          filters.push(["==", ["get", "INTERNAL_MATCH_TYPE"], newAddressType]);
         }
 
-        newMismatchType = props?.mismatchType?.toUpperCase() || "ALL";
+        const newMismatchType = props?.mismatchType?.toUpperCase() || "ALL";
         if (selectedMismatchType !== newMismatchType) {
           selectedMismatchType = newMismatchType;
-          updated = true;
+        }
+        if (selectedMismatchType !== "ALL") {
+          filters.push(["has", `INTERNAL_OSM_${selectedMismatchType}`]);
         }
 
+        map.setFilter("addresses-layer", filters);
+
         if (updated) {
-          loadGeojson(map);
+          loadCounties();
         }
       }
 

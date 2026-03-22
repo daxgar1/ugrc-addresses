@@ -11,6 +11,7 @@ import { downloadCountyBoundaries } from "./src/downloadCountyBoundaries.js";
 import { downloadUgrcAddresses } from "./src/downloadUgrcAddresses.js";
 import { splitAddressesByCounty } from "./src/splitAddresses.js";
 import { conflate } from "./src/conflate.js";
+import { createVectorTiles } from "./src/createVectorTiles.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +43,10 @@ app.use(
   "/data",
   express.static(outDir, {
     setHeaders: (res, path) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
       if (process.env.NODE_ENV !== "production") return;
 
       const expires = getNextCacheExpiration();
@@ -195,6 +200,8 @@ async function scheduledSyncJob(fireTime, forceUgrcSync = false) {
 
     failureStep = "Conflation";
     const conflationResults = await conflate();
+
+    await createVectorTiles();
 
     const duration = ((Date.now() - start) / 1000).toFixed(2);
 
