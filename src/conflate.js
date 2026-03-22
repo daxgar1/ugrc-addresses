@@ -212,6 +212,14 @@ function compare(ugrcVal, osmVal, type = "") {
       if (ugrcSpaceless === houseNumber.replace(spaceRegex, "")) {
         return "FULL";
       }
+
+      // The OSM house number may contain the street prefix (possibly abbreviated), so try comparing without letters
+      if (
+        ugrcSpaceless ===
+        houseNumber.replace(/[A-Za-z]/g, "").replace(spaceRegex, "")
+      ) {
+        return "PARTIAL";
+      }
     }
   } else if (type === "STREET") {
     // Remove a prefix direction if it exists at the start of the OSM street name
