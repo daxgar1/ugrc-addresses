@@ -21,6 +21,7 @@
     "download-ugrc-addresses": "node src/downloadUgrcAddresses.js",
     "split-addresses-by-county": "node src/splitAddresses.js",
     "conflate": "node src/conflate.js",
+    "create-vector-tiles": "node src/createVectorTiles.js",
     "create-maproulette-challenge-files": "node src/createMapRouletteChallengeFiles.js",
     "start": "node server.js",
     "format": "npx prettier . --write"

@@ -73,6 +73,7 @@ export const UtahCountyFile = "./data/utah-counties.json";
 
 export const OutputFolder = "./out";
 export const MapRouletteDataFolder = "./out/maproulette";
+export const VectorTileFileName = "addresses.pmtiles";
 
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
